@@ -3,6 +3,7 @@ package com.gswxxn.autonfc.hook
 import android.nfc.NfcAdapter
 import android.widget.Toast
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
+import com.highcapable.yukihookapi.hook.factory.configs
 import com.highcapable.yukihookapi.hook.factory.encase
 import com.highcapable.yukihookapi.hook.factory.method
 import com.highcapable.yukihookapi.hook.type.android.ContextClass
@@ -11,28 +12,14 @@ import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
 
 @InjectYukiHookWithXposed
 class HookEntry : IYukiHookXposedInit {
+    override fun onInit() = configs {
+        debugTag = "AutoNFC"
+        isDebug = false
+    }
+
     override fun onHook() = encase {
         loadApp("com.miui.tsmclient") {
             findClass("com.miui.tsmclient.ui.quick.DoubleClickActivity").hook {
-                injectMember {
-                    method {
-                        name = "onWindowFocusChanged"
-                        param(BooleanType)
-                    }
-                    beforeHook {
-                        val isEnable = args(0).boolean()
-                        NfcAdapter::class.java.method {
-                            name = "getDefaultAdapter"
-                            param(ContextClass)
-                        }.get().call(appContext).let { nfcAdapter ->
-                            when {
-                                !isEnable -> nfcAdapterHelper("disable", nfcAdapter).call()
-                                isEnable && !nfcAdapterHelper("isEnabled", nfcAdapter).boolean() ->
-                                    nfcAdapterHelper("enable", nfcAdapter).call()
-                            }
-                        }
-                    }
-                }
 
                 injectMember {
                     method {
@@ -57,15 +44,32 @@ class HookEntry : IYukiHookXposedInit {
                                 else return@repeat
 
                                 if (it == 14)
-                                    Toast.makeText(appContext, "自动开启 NFC 失败", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(appContext, "自动开启 NFC 失败", Toast.LENGTH_SHORT)
+                                        .show()
                             }
                         }
 
                     }
                 }
+
+                injectMember {
+                    method {
+                        name = "onDestroy"
+                        emptyParam()
+                    }
+                    beforeHook {
+                        NfcAdapter::class.java.method {
+                            name = "getDefaultAdapter"
+                            param(ContextClass)
+                        }.get().call(appContext).let { nfcAdapter ->
+                            nfcAdapterHelper("disable", nfcAdapter).call()
+                        }
+                    }
+                }
             }
         }
     }
+
 
     private fun nfcAdapterHelper(methodName: String, inst : Any?) =
         NfcAdapter::class.java.method {
