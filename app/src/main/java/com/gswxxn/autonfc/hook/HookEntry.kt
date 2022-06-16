@@ -55,14 +55,13 @@ class HookEntry : IYukiHookXposedInit {
                             name = "getDefaultAdapter"
                             param(ContextClass)
                         }.get().call(appContext).let { nfcAdapter ->
+                            if (nfcAdapterHelper("isEnabled", nfcAdapter).boolean()) return@afterHook
+
                             nfcAdapterHelper("enable", nfcAdapter).call()
 
                             MainScope().launch {
                                 waitNFCEnable(appContext, nfcAdapter)
-                                field { type(VariousClass(
-                                    "$basePackage.p",
-                                    "$basePackage.SwitchCardFragment"
-                                )).index().first() }.get(instance).setNull()
+                                field { name = "s" }.get(instance).setNull()
                                 method.invokeOriginal<Unit>()
                             }
                         }
@@ -94,10 +93,7 @@ class HookEntry : IYukiHookXposedInit {
         }.get(inst)
 
     private suspend fun waitNFCEnable(context : Context, nfcAdapter : Any?) {
-        val isEnabled = NfcAdapter::class.java.method {
-            name = "isEnabled"
-            emptyParam()
-        }.get(nfcAdapter)
+        val isEnabled = nfcAdapterHelper("isEnabled", nfcAdapter)
 
         repeat(15) {
             if (!isEnabled.boolean())
