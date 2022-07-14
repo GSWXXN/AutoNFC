@@ -61,7 +61,13 @@ class HookEntry : IYukiHookXposedInit {
 
                             MainScope().launch {
                                 waitNFCEnable(appContext, nfcAdapter)
-                                field { name = "s" }.get(instance).setNull()
+                                field {
+                                    type = VariousClass(
+                                        "$basePackage.SwitchCardFragment",
+                                        "$basePackage.q",
+                                        "$basePackage.p"
+                                        )
+                                }.get(instance).setNull()
                                 method.invokeOriginal<Unit>()
                             }
                         }
