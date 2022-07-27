@@ -4,11 +4,12 @@ import android.content.Context
 import android.nfc.NfcAdapter
 import android.widget.Toast
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.bean.VariousClass
 import com.highcapable.yukihookapi.hook.factory.configs
 import com.highcapable.yukihookapi.hook.factory.encase
 import com.highcapable.yukihookapi.hook.factory.method
+import com.highcapable.yukihookapi.hook.type.android.BundleClass
 import com.highcapable.yukihookapi.hook.type.android.ContextClass
+import com.highcapable.yukihookapi.hook.type.java.BooleanType
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
@@ -23,8 +24,6 @@ class HookEntry : IYukiHookXposedInit {
 
     override fun onHook() = encase {
         loadApp("com.miui.tsmclient") {
-
-            val basePackage = "com.miui.tsmclient.ui.quick"
 
             resources().hook {
                 injectResource {
@@ -44,11 +43,11 @@ class HookEntry : IYukiHookXposedInit {
                 }
             }
 
-            "$basePackage.DoubleClickActivity".hook {
+            "$packageName.ui.quick.DoubleClickActivity".hook {
                 injectMember {
                     method {
-                        name = "onResume"
-                        emptyParam()
+                        name = "onCreate"
+                        param(BundleClass)
                     }
                     afterHook {
                         NfcAdapter::class.java.method {
@@ -61,14 +60,12 @@ class HookEntry : IYukiHookXposedInit {
 
                             MainScope().launch {
                                 waitNFCEnable(appContext, nfcAdapter)
-                                field {
-                                    type = VariousClass(
-                                        "$basePackage.SwitchCardFragment",
-                                        "$basePackage.q",
-                                        "$basePackage.p"
-                                        )
-                                }.get(instance).setNull()
-                                method.invokeOriginal<Unit>()
+                                val ctaHelper = "$packageName.entity.CTAHelper".clazz
+                                field { type(BooleanType).index().last() }.get(instance).setFalse()
+                                ctaHelper.method {
+                                    name = "check"
+                                    emptyParam()
+                                }.get(field { type = ctaHelper }.get(instance).any()).call()
                             }
                         }
                     }
