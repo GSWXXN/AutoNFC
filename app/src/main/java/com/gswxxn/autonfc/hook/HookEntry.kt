@@ -69,6 +69,8 @@ class HookEntry : IYukiHookXposedInit {
                             }
                         }
                     }
+                }.onAllFailure {
+                    Toast.makeText(appContext, "如遇卡在自动开启NFC界面，请点击\"手动开启NFC\"按钮再返回此界面临时解决，并向模块开发者反馈",Toast.LENGTH_SHORT).show()
                 }
 
                 injectMember {
