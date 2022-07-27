@@ -11,8 +11,8 @@ android {
         applicationId "com.gswxxn.autonfc"
         minSdk 26
         targetSdk 32
-        versionCode 14
-        versionName "1.4"
+        versionCode 15
+        versionName "1.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -37,5 +37,5 @@ dependencies {
     implementation 'com.highcapable.yukihookapi:api:1.0.92'
     ksp 'com.highcapable.yukihookapi:ksp-xposed:1.0.92'
     implementation 'com.android.support:support-annotations:28.0.0'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.3'
 }
