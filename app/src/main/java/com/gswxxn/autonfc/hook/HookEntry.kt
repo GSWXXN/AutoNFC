@@ -3,6 +3,7 @@ package com.gswxxn.autonfc.hook
 import android.content.Context
 import android.nfc.NfcAdapter
 import android.widget.Toast
+import com.gswxxn.autonfc.BuildConfig
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.factory.configs
 import com.highcapable.yukihookapi.hook.factory.encase
@@ -16,10 +17,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @InjectYukiHookWithXposed
-class HookEntry : IYukiHookXposedInit {
+object HookEntry : IYukiHookXposedInit {
     override fun onInit() = configs {
-        debugTag = "AutoNFC"
-        isDebug = false
+        debugLog { tag = "AutoNFC" }
+        isDebug = BuildConfig.DEBUG
     }
 
     override fun onHook() = encase {
@@ -59,8 +60,8 @@ class HookEntry : IYukiHookXposedInit {
                             nfcAdapterHelper("enable", nfcAdapter).call()
 
                             MainScope().launch {
-                                waitNFCEnable(appContext, nfcAdapter)
-                                val ctaHelper = "$packageName.entity.CTAHelper".clazz
+                                waitNFCEnable(appContext!!, nfcAdapter)
+                                val ctaHelper = "$packageName.entity.CTAHelper".toClass()
                                 field { type(BooleanType).index().last() }.get(instance).setFalse()
                                 ctaHelper.method {
                                     name = "check"
