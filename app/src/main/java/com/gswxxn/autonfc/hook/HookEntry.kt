@@ -6,6 +6,7 @@ import android.widget.Toast
 import com.gswxxn.autonfc.BuildConfig
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.factory.configs
+import com.highcapable.yukihookapi.hook.factory.current
 import com.highcapable.yukihookapi.hook.factory.encase
 import com.highcapable.yukihookapi.hook.factory.method
 import com.highcapable.yukihookapi.hook.type.android.BundleClass
@@ -61,12 +62,19 @@ object HookEntry : IYukiHookXposedInit {
 
                             MainScope().launch {
                                 waitNFCEnable(appContext!!, nfcAdapter)
-                                val ctaHelper = "$packageName.entity.CTAHelper".toClass()
-                                field { type(BooleanType).index().last() }.get(instance).setFalse()
-                                ctaHelper.method {
-                                    name = "check"
-                                    emptyParam()
-                                }.get(field { type = ctaHelper }.get(instance).any()).call()
+                                val isNewVersion = "$packageName.entity.CTAHelper".hasClass()
+
+                                if (isNewVersion) {
+                                    val ctaHelper = "$packageName.entity.CTAHelper".toClass()
+                                    field { type(BooleanType).index().last() }.get(instance).setFalse()
+                                    ctaHelper.method {
+                                        name = "check"
+                                        emptyParam()
+                                    }.get(field { type = ctaHelper }.get(instance).any()).call()
+                                } else if (instance.current().field { name = "mLoginStatus" }.boolean()) {
+                                    instance.current().method { name = "requestShowSwitchCardFragment" }.call()
+                                }
+
                             }
                         }
                     }
