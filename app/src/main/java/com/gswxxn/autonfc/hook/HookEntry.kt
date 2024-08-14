@@ -2,6 +2,7 @@ package com.gswxxn.autonfc.hook
 
 import android.content.Context
 import android.nfc.NfcAdapter
+import android.os.UserHandle
 import android.widget.Toast
 import com.gswxxn.autonfc.BuildConfig
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
@@ -56,12 +57,34 @@ object HookEntry : IYukiHookXposedInit {
                             name = "getDefaultAdapter"
                             param(ContextClass)
                         }.get().call(appContext).let { nfcAdapter ->
-                            if (nfcAdapterHelper("isEnabled", nfcAdapter).boolean()) return@afterHook
+                            if (nfcAdapterHelper("isEnabled", nfcAdapter).boolean()) {
+                                "android.provider.Settings\$Secure".toClass().method {
+                                    name = "putStringForUser"
+                                    paramCount(4)
+                                }.get().call(
+                                    appContext!!.contentResolver,
+                                    "nfc_payment_default_component",
+                                    "com.android.nfc/com.android.nfc.cardemulation.ESEWalletDummyService",
+                                    UserHandle::class.java.method { name = "myUserId" }.get().invoke()
+                                )
+                                return@afterHook
+                            }
 
                             nfcAdapterHelper("enable", nfcAdapter).call()
 
                             MainScope().launch {
-                                waitNFCEnable(appContext!!, nfcAdapter)
+                                if (waitNFCEnable(appContext!!, nfcAdapter)) {
+                                    "android.provider.Settings\$Secure".toClass().method {
+                                        name = "putStringForUser"
+                                        paramCount(4)
+                                    }.get().call(
+                                        appContext!!.contentResolver,
+                                        "nfc_payment_default_component",
+                                        "com.android.nfc/com.android.nfc.cardemulation.ESEWalletDummyService",
+                                        UserHandle::class.java.method { name = "myUserId" }.get().invoke()
+                                    )
+                                }
+
                                 val isNewVersion = "$packageName.entity.CTAHelper".hasClass()
 
                                 if (isNewVersion) {
@@ -106,18 +129,19 @@ object HookEntry : IYukiHookXposedInit {
             emptyParam()
         }.get(inst)
 
-    private suspend fun waitNFCEnable(context : Context, nfcAdapter : Any?) {
+    private suspend fun waitNFCEnable(context : Context, nfcAdapter : Any?): Boolean {
         val isEnabled = nfcAdapterHelper("isEnabled", nfcAdapter)
 
         repeat(15) {
             if (!isEnabled.boolean())
                 delay(300)
             else {
-                return@repeat
+                return true
             }
 
             if (it == 14)
                 Toast.makeText(context, "自动开启 NFC 失败", Toast.LENGTH_SHORT).show()
         }
+        return false
     }
 }
